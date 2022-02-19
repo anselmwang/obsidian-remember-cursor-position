@@ -1,6 +1,36 @@
 import { App, Plugin, PluginSettingTab, Setting, MarkdownView, TAbstractFile } from 'obsidian';
 import * as CodeMirror from "codemirror";
 
+declare module "obsidian" {
+    interface App {
+        isMobile: boolean;
+    }
+}
+
+// Call this method inside your plugin's `onLoad` function
+function monkeyPatchConsole(plugin: Plugin) {
+  if (!plugin.app.isMobile) {
+    return;
+  }
+  
+  const logFile = `${plugin.manifest.dir}/logs.txt`;
+  console.log(logFile);
+  const logs: string[] = [];
+  const logMessages = (prefix: string) => (...messages: unknown[]) => {
+    logs.push(`\n[${prefix}]`);
+    for (const message of messages) {
+      logs.push(String(message));
+    }
+    plugin.app.vault.adapter.write(logFile, logs.join(" "));
+  };
+
+  console.debug = logMessages("debug");
+  console.error = logMessages("error");
+  console.info = logMessages("info");
+  console.log = logMessages("log");
+  console.warn = logMessages("warn");
+}
+
 interface PluginSettings {
 	dbFileName: string;
 	delayAfterFileOpening: number;
@@ -68,6 +98,7 @@ export default class RememberCursorPosition extends Plugin {
 		this.registerInterval(window.setInterval(() => this.checkEphemeralStateChanged(), 100));
 
 		this.restoreEphemeralState();
+		monkeyPatchConsole(this);
 	}
 
 
@@ -152,12 +183,14 @@ export default class RememberCursorPosition extends Plugin {
 
 		this.loadingFile = true;
 
+		console.log(`lastLoadedFileName: ${this.lastLoadedFileName}, fileName: ${fileName}`);
 		if (this.lastLoadedFileName != fileName) {
 			this.lastEphemeralState = {}
 			this.lastLoadedFileName = fileName;
 
 			if (fileName) {
 				let st = this.db[fileName];
+				console.log(`st: ${JSON.stringify(st)}`);
 				if (st) {
 					//waiting for load note		
 					await this.delay(this.settings.delayAfterFileOpening)
@@ -168,6 +201,7 @@ export default class RememberCursorPosition extends Plugin {
 							break;
 						await this.delay(10)
 					}
+					console.log(`scroll: ${scroll}`);
 
 					//if note opened by link like [link](note.md#header), do not scroll it
 					if (scroll === 0) {
@@ -241,12 +275,14 @@ export default class RememberCursorPosition extends Plugin {
 
 		if (state.cursor) {
 			let editor = this.getEditor();
+			console.log(`editor: ${Boolean(editor)}`);
 			if (editor) {
 				editor.setSelection(state.cursor.from, state.cursor.to, { scroll: false });
 			}
 		}
 
 		if (view && state.scroll) {
+			console.log(`enter view setEphemeralState`)
 			view.setEphemeralState(state);
 			// view.previewMode.applyScroll(state.scroll);
 			// view.sourceMode.applyScroll(state.scroll);
