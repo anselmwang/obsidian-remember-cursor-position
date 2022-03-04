@@ -98,7 +98,7 @@ export default class RememberCursorPosition extends Plugin {
 		this.registerInterval(window.setInterval(() => this.checkEphemeralStateChanged(), 100));
 
 		this.restoreEphemeralState();
-		monkeyPatchConsole(this);
+		// monkeyPatchConsole(this);
 	}
 
 
