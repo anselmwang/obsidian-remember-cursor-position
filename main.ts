@@ -204,7 +204,9 @@ export default class RememberCursorPosition extends Plugin {
 					console.log(`scroll: ${scroll}`);
 
 					//if note opened by link like [link](note.md#header), do not scroll it
-					if (scroll === 0) {
+					// Plugin outliner will generate a scroll value around ~0.2 on mobile, even the plugin is desktop only.
+					// I am not sure if this is a bug of outliner or Obsidian.
+					if (scroll < 0.5) {
 						//force update scroll while note is loading
 						//todo: find better solution to wait for file loaded
 						for (let i = 0; i < 20; i++) {
